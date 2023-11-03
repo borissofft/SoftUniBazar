@@ -1,0 +1,12 @@
+docker context use default
+
+az login
+
+terraform init
+
+terraform fmt
+
+terraform validate
+
+terraform apply
+terraform apply -var-file="values.tfvars"

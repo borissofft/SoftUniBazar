@@ -1,0 +1,44 @@
+docker build -t bazar .
+
+docker volume create sqldata
+
+docker network create bazar
+
+docker run -e ACCEPT_EULA=Y -e MSSQL_SA_PASSWORD=myStrongPassword12# -p 1433:1433 -v sqldata:/var/opt/mssql --network bazar --name sqlserver -d mcr.microsoft.com/mssql/server
+
+docker run --name bazarapp -d -p 80:80 --network bazar bazar
+
+#Now we have WebApp and SQL server containers working in one network and they can communicate each other and the App is accessible on http://localhost:8080
+docker network inspect bazar
+
+#Create docker-compose.yml file and build it locally:
+
+docker-compose build
+
+docker-compose up -d
+
+docker-compose down --volumes
+
+az login
+
+az group create --name XXbazarsrg --location westeurope
+
+#Create Azure container registry(хранилище) - here we will deploy our image which for now is only build locally:
+az acr create --resource-group XXbazarsrg --name XXbazarscr --sku Basic
+
+#Change the name of locally build image, don't forget to change it in docker-compose.yml file:
+docker tag bazar XXbazarscr.azurecr.io/bazar
+
+#Loggin before push the image:
+az acr login --name XXbazarscr
+
+#When we execute push in Docker Hub we have to tag the image with our: username/image name. Here in Azure we have to tage it with: container registry full name/image name:
+docker push XXbazarscr.azurecr.io/bazar
+
+#Create Azure context and choose XXbazarsrg to associate locally opened CLI with Azure(we have installed Azure CLI) then we can run commands in Azure(start docker-compose.yml):
+docker context create aci bazarcontext
+
+#Firstly we have to use this context before execute commands in Azure:
+docker context use bazarcontext
+
+docker-compose up -d
